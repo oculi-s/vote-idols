@@ -6,115 +6,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('.menu').empty();
-            const btns = [1, 2, 3, 4].map(e => {
-                return $('<button>').addClass('shadow-lg border rounded-lg bg-white p-2').text(`${e}세대`);
-            });
-            btns.forEach(e => {
-                e.click(function () {
-                    query(keys[0], `select * where A = ${e}`, 'my_callback');
-                });
-                e.appendTo('.menu');
-            });
-        });
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-firestore.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/earlyaccess/notosanskr.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <script type="module">
         const API_KEY = 'AIzaSyBFYYQSF1a146Ipy2cPnnRxWUNXT1fKimk';
-        const SPREADSHEET_DOC_ID = "1NzINHRoGNq53OGnuo99wcd8bkNFMAizz7qN8Hj_Rxlk"
-        const GOOGLE_SERVICE_ACCOUNT_EMAIL = "admin-595@vote-idol-440117.iam.gserviceaccount.com"
-        const GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDTCTsCM7gN+Nte\nOm+/GjxPU5vMrj8qfuvtS+tsIAlM3d7FHlRgm74UG+H4tXe7div8DOFLlPR8YNzz\nWH+Mgrr8guFJZPK5W9a5CQPMkFTDifIVoj93Wevl0KiElRO2lARTPtWm3/Yuc8S4\n5OU96Q+/1Ujr0KWJkEKw5lb8sLrLa211CnnWUcrXPbte+QjIF7EgU4WZjdixLljz\nR93vAHDJMyp83pY80Q7UJWwXJ8y+j2OsM5SicKlRPndRzSX9D/YUHi37NOS9P5pq\n0zIzmnY6getHAgzkxOm4peNIvlcimHsW1Uqm9EqlEc54cocDZNyaWk7ZbvFvDj/h\nniNiHVGvAgMBAAECggEACjipHo+EfxNqIe47h8pzvAPcOpzHtDZTTh2skWZUt6cK\n8HvcBs5LZ2+12GbcVqAOLcRnRRnkgR4lQCefYlbZvPvkgQ/BvIUHGyneZFkrCPSf\nQJz90Jy5dncyFd1mJF1Bm+2wEMe7voYCQhlpYQcn4ljvkecKD0lo/7v9pwhr2Qj+\nQNfVg5hDHqxJZAI4mmsuudUJ9TAkEWmSqqQXyzr4aIIS+9ejmemlFLeFuHmyPnfg\nIHG04V1HiAJJTJFE5hXdZc5oiPbsX6rRMdJ2L9P8MQOS+Lt1gJQe2t1eHmzt7HM3\n61VkvzY85eBSmuivwB2hL8aalaW6VeX0WIKZtkN0AQKBgQDqfODJRokvQb1lQDvK\n9NbxLsBx8CeCtV6JdbZ+039ccy1H7PIYh2inBsFfixvQA+zXpVEpKhxsSMb5iWzQ\nuXGo88v5YEbOhwry+7+VQPVbCp16872dmLEaZWpu3/3yAfNLBoiwwqIzHNItIbN7\nKBpqN+5mIhcht7dDW8xD+LUp7wKBgQDmZZIOsvJvJrf2LUmYIxhwrodfZn0IE4QQ\nrI1gKmhXFZb85YYFbvHp5+cdQCz1sLbgYOu9cv5IgcK7BonLUM0eqagB1BwJ7Fwo\nGWaOWo/G+tyXDFm5q8tOgseZKpEWlsSFj8Nh9jeYGLXOUFDKMmOBJYDLjfQYC1Xf\nnNhcS5kUQQKBgEIZVZwnQACMPYFPLAu4HOb70M/NbLXRvoZtIjZ6FArRhNAjoNL9\nSKjcpKH0KrDmilr3hPtfnYeAtGYfMQddXwbLQpJXa15IfvOjt4uxNfil82J3VtoX\n8sSIFgqPJZyUpCpf+yQomWRjGXQTbe6njVqnzZIIxhCBIy3fsKLwdtENAoGAHvNe\nH6NidhQZenSzAkEUs25+uQ4nlcIpZ6QGifioc6pu0iJzUp+I2AdTQNayM3890f6z\nLIwaJNtpsX47XJjKNWhNLZG1ApBCAREIee8oiW6B27jJBOxTL4TaE3VocERouhiK\nAsr0xPXs1n5rm/4Q5/SFzNKRC/nZ22RSnHN7aQECgYEAk+QnijQxGlwVLwz8Ap9p\nrdBd0QdeHD9NargMV37XmOK7WVoiNsCEsc3dtMYrJPuPaci73sgmyjgsJQgoq7qu\ndExdQ2X6W7KnoCEEm2Bq8yKcN2iC74I2+i/9Ckj4SbO2uFsUHjNBvRZyzyCH3zs0\nyqk9fsh1p48ehftZn2NyrW8=\n-----END PRIVATE KEY-----\n";
-        async function start() {
-            $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_DOC_ID}/values/그룹!A1:Z100?key=${API_KEY}`,
-                function (data) {
-                    const res = data.values;
-                    const col = res[0];
-                    var data = res.slice(1);
-                    data = data.map(e => {
+        const SPREADSHEET_ID = "1NzINHRoGNq53OGnuo99wcd8bkNFMAizz7qN8Hj_Rxlk"
+
+        $(document).ready(function () { initMenu() });
+
+        function initMenu() {
+            const generations = [1, 2, 3, 4];
+            generations.forEach(gen => {
+                $('<button>')
+                    .addClass('shadow-lg border rounded-lg bg-white p-2')
+                    .text(`${gen}세대`)
+                    .click(() => { location.href = `?gen=${gen}` })
+                    .appendTo('.menu');
+            });
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const gen = urlParams.get('gen') || '1';
+
+        // 0. 사용자의 IP 주소를 가져옵니다.
+        function getIp() {
+            return $.getJSON('https://jsonip.com').then(data => data.ip);
+        }
+
+        // 1. 스프레드시트 데이터를 읽어와 화면에 렌더링합니다.
+        $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/그룹!A1:Z100?key=${API_KEY}`,
+            function (data) {
+                const res = data.values;
+                const col = res[0];
+                var data = res.slice(1);
+                $('.tiles').empty();
+                data
+                    .filter(e => e[0] === gen)
+                    .map(e => {
                         const o = {};
                         col.forEach((c, i) => {
                             o[c] = e[i];
                         });
                         return o;
-                    });
-                    $('.tiles').empty();
-                    data.forEach(e => {
+                    }).forEach((e, i) => {
                         const tile = $('<div>')
-                            .addClass('shadow-lg border rounded-lg bg-white p-2 cursor-pointer hover:bg-gray-100')
+                            .addClass('shadow-lg border rounded-lg bg-white p-3 hover:bg-gray-100')
                             .html(
                                 Object.keys(e).map(k => {
                                     return `<div>${k}: ${e[k]}</div>`;
                                 }).join('')
                             )
-                            .click(async function () {
-                                const ip = await getIp();
-                                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_DOC_ID}/values/투표!A1:Z100?key=${API_KEY}`;
-                                console.log(ip, url);
-                                $.ajax({
-                                    // POST https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:append
-                                    url: `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_DOC_ID}/values/투표!A1:Z100:append?key=${API_KEY}`,
-                                    type: 'POST',
-                                    data: JSON.stringify({
-                                        ip,
-                                        group: e['그룹명'],
-                                        // member: e['이름'],
-                                    }),
-                                    success: function (data) {
-                                        console.log(data);
-                                    },
-                                    error: function (err) {
-                                        console.log(err.responseText);
-                                    },
-                                });
-                            });
-                        tile.appendTo('.tiles');
+                            .appendTo('.tiles');
+                        const vote = $('<button>')
+                            .text('투표하기')
+                            .addClass('bg-blue-500 text-white p-1 rounded-lg w-full my-2')
+                            .click(() => { submitVote(i) })
+                            .appendTo(tile);
+                        const voteCount = $('<div>')
+                            .addClass('text-center')
+                            .appendTo(tile);
+                        const voteCountLabel = $('<div>')
+                            .text('투표수')
+                            .appendTo(voteCount);
+                        const voteCountValue = $('<div>')
+                            .addClass('count text-2xl font-bold')
+                            .text('0')
+                            .appendTo(voteCount);
                     });
-                });
-            // gapi.client.init({
-            //     apiKey: API_KEY,
-            //     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-            // }).then(() => {
-            //     gapi.client.sheets.spreadsheets.values.get({
-            //         spreadsheetId: SPREADSHEET_DOC_ID,
-            //         range: '그룹!A1:Z100',
-            //     })
-            //         .then((res) => {
-            //             res = res.result.values;
-            //             const col = res[0];
-            //             var data = res.slice(1);
-            //             data = data.map(e => {
-            //                 const o = {};
-            //                 col.forEach((c, i) => {
-            //                     o[c] = e[i];
-            //                 });
-            //                 return o;
-            //             });
-            //             console.log(data);
-            //         }).catch((err) => {
-            //             console.log(err);
-            //         });
-            //     gapi.client.sheets.spreadsheets.values.update();
-            // });
+                loadVotes();
+            }
+        );
+
+        const fb = firebase;
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXdA3ZLOQvQz3G8ZG7MBhbIJFuKe5S0t8",
+            authDomain: "vote-ca9e8.firebaseapp.com",
+            projectId: "vote-ca9e8",
+            storageBucket: "vote-ca9e8.appspot.com",
+            messagingSenderId: "159332467820",
+            appId: "1:159332467820:web:2399e6a263f3a3111fc449",
+            measurementId: "G-TNSVP2Y9YD"
+        };
+
+        // Initialize Firebase
+        const app = fb.initializeApp(firebaseConfig);
+        const db = fb.firestore(app);
+        let votes = [];
+
+        // 2. 사용자의 투표를 저장합니다.
+        function submitVote(idx) {
+            getIp().then(ip => {
+                if (votes.some(v => v.ip === ip && v.timestamp?.seconds * 1000 >= Date.now() - 1000 * 5)) {
+                    // alert('5초에 한 번만 투표할 수 있습니다.');
+                    Toastify({
+                        text: "5초에 한 번만 투표할 수 있습니다.",
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: 'center',
+                        className: "bg-red-300"
+                    }).showToast();
+                    return;
+                }
+                db.collection('votes').add({
+                    ip,
+                    idx,
+                    timestamp: fb.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    // alert('투표가 저장되었습니다.');
+                    Toastify({
+                        text: "투표가 저장되었습니다.",
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: 'center',
+                        className: "bg-green-300"
+                    }).showToast();
+                    loadVotes();
+                })
+            });
         }
-        function gapiLoaded() {
-            gapi.load('client', start);
-        }
-        function getIp() {
-            return new Promise((resolve, reject) => {
-                $.getJSON('https://jsonip.com', function (data) {
-                    resolve(data.ip);
+
+        // 3. 투표 결과를 가져와 화면에 렌더링합니다.
+        function loadVotes() {
+            db.collection('votes').onSnapshot(snapshot => {
+                votes = snapshot.docs.map(doc => doc.data());
+                const voteCount = votes.reduce((acc, cur) => {
+                    acc[cur.idx] = (acc[cur.idx] || 0) + 1;
+                    return acc;
+                }, {});
+                $('.tiles .count').each((i, e) => {
+                    const idx = i;
+                    const count = voteCount[idx] || 0;
+                    $(e).text(count);
                 });
             });
         }
+
     </script>
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
 </head>
 
-<body class="w-full h-full m-0 p-0">
-    <div class="flex flex-wrap menu gap-1 p-3">
-    </div>
-    <div class="flex flex-wrap gap-1 p-3 tiles">
-    </div>
-    <table></table>
+<body class="w-full h-full m-0 p-0" style="font-family: 'Noto Sans KR', sans-serif;">
+    <div class="flex flex-wrap menu gap-1 p-3"></div>
+    <div class="flex flex-wrap gap-5 p-3 tiles max-lg:grid max-lg:grid-cols-2"></div>
 </body>
 
 </html>
