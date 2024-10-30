@@ -44,35 +44,49 @@
         $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/그룹!A1:Z100?key=${API_KEY}`,
             function (data) {
                 const res = data.values;
-                const col = res[0];
+                const col = ['idx', ...res[0]];
                 var data = res.slice(1);
                 $('.tiles').empty();
                 data
-                    .filter(e => e[0] === gen)
-                    .map(e => {
+                    .map((e, i) => [i, ...e])
+                    .filter(e => e[1] === gen)
+                    .map((e) => {
                         const o = {};
                         col.forEach((c, i) => {
                             o[c] = e[i];
                         });
                         return o;
-                    }).forEach((e, i) => {
+                    })
+                    .forEach((e, i) => {
                         const tile = $('<div>')
                             .addClass('shadow-lg border rounded-lg bg-white p-3 hover:bg-gray-100')
+                            .attr('data-idx', e.idx)
                             .html(
-                                Object.keys(e).map(k => {
-                                    return `<div>${k}: ${e[k]}</div>`;
-                                }).join('')
+                                Object.keys(e)
+                                    .filter(e => e !== 'idx' && e !== '세대')
+                                    .map(k => {
+                                        return `<div>${k}: ${e[k]}</div>`;
+                                    }).join('')
                             )
                             .appendTo('.tiles');
-                        const vote = $('<button>')
-                            .text('투표하기')
-                            .addClass('bg-blue-500 text-white p-1 rounded-lg w-full my-2')
-                            .click(() => { submitVote(i) })
+                        const voteBtnWrapper = $('<div>')
+                            .addClass('flex gap-1 relative text-white')
                             .appendTo(tile);
+                        const voteBtn = $('<button>')
+                            .text('투표하기')
+                            .prop('disabled', true)
+                            .attr('data-time', 5)
+                            .addClass('bg-blue-500 p-1 rounded-lg w-full my-2 vote disabled:opacity-50')
+                            .click(() => { submitVote(e.idx) })
+                            .appendTo(voteBtnWrapper);
+                        const voteTime = $('<div>')
+                            .addClass('text-center vote-time text-sm absolute right-3 top-3')
+                            .appendTo(voteBtnWrapper);
                         const voteCount = $('<div>')
-                            .addClass('text-center')
+                            .addClass('text-center text-sm')
                             .appendTo(tile);
                         const voteCountLabel = $('<div>')
+                            .addClass('text-sm')
                             .text('투표수')
                             .appendTo(voteCount);
                         const voteCountValue = $('<div>')
@@ -99,54 +113,83 @@
         const app = fb.initializeApp(firebaseConfig);
         const db = fb.firestore(app);
         let votes = [];
+        let votesLoaded = false;
+        let timeRemaining = 0;
 
         // 2. 사용자의 투표를 저장합니다.
-        function submitVote(idx) {
-            getIp().then(ip => {
+        async function submitVote(idx) {
+            return getIp().then(ip => {
+                if (!votesLoaded || !ip) return;
                 if (votes.some(v => v.ip === ip && v.timestamp?.seconds * 1000 >= Date.now() - 1000 * 5)) {
-                    // alert('5초에 한 번만 투표할 수 있습니다.');
                     Toastify({
                         text: "5초에 한 번만 투표할 수 있습니다.",
-                        duration: 3000,
+                        duration: 2000,
                         close: true,
                         gravity: "top",
                         position: 'center',
-                        className: "bg-red-300"
+                        className: "!bg-red-400",
+                        style: {
+                            background: 'unset'
+                        }
                     }).showToast();
                     return;
                 }
+                const vote = $('[data-idx=' + idx + ']');
+                const voteBtn = vote.find('.vote');
+                const voteTime = vote.find('.vote-time');
+                voteBtn.attr('data-time', 5).prop('disabled', true);
+                var intval =
+                    setInterval(() => {
+                        const time = voteBtn.attr('data-time');
+                        if (time > 0) {
+                            voteBtn.prop('disabled', true);
+                            voteBtn.attr('data-time', time - 1);
+                            voteTime.text(`${time}`);
+                        } else {
+                            voteBtn.prop('disabled', false);
+                            voteTime.text('');
+                            clearInterval(intval);
+                        }
+                    }, 1000);
                 db.collection('votes').add({
                     ip,
                     idx,
                     timestamp: fb.firestore.FieldValue.serverTimestamp()
                 }).then(() => {
-                    // alert('투표가 저장되었습니다.');
                     Toastify({
                         text: "투표가 저장되었습니다.",
-                        duration: 3000,
+                        duration: 2000,
                         close: true,
                         gravity: "top",
                         position: 'center',
-                        className: "bg-green-300"
+                        className: "!bg-green-500",
+                        style: {
+                            background: "unset"
+                        }
                     }).showToast();
-                    loadVotes();
+                    loadVotes(false);
+                    setTimeout(() => {
+                        $('.vote').prop('disabled', false);
+                    }, 5000);
                 })
             });
         }
 
         // 3. 투표 결과를 가져와 화면에 렌더링합니다.
-        function loadVotes() {
-            db.collection('votes').onSnapshot(snapshot => {
+        async function loadVotes(init = true) {
+            return db.collection('votes').onSnapshot(snapshot => {
                 votes = snapshot.docs.map(doc => doc.data());
+                votesLoaded = true;
+                if (init) $('.vote').prop('disabled', false);
                 const voteCount = votes.reduce((acc, cur) => {
                     acc[cur.idx] = (acc[cur.idx] || 0) + 1;
                     return acc;
                 }, {});
-                $('.tiles .count').each((i, e) => {
-                    const idx = i;
-                    const count = voteCount[idx] || 0;
-                    $(e).text(count);
-                });
+                $('.tiles .count')
+                    .each((i, e) => {
+                        const idx = $(e).closest('.shadow-lg').attr('data-idx');
+                        $(e).text(voteCount[idx] || 0);
+                    });
             });
         }
 
